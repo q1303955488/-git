@@ -1,0 +1,140 @@
+<template>
+  <view class="authorize-container">
+    <view class="auth-item">您还未登陆</view>
+    <view class="auth-item">请先登录再进行操作</view>
+    <image class="authorize-icon" src="https://tenfen-video.oss-cn-beijing.aliyuncs.com/authorize.png"
+           mode="widthFix"></image>
+    <view class="auth-item">商城申请获取以下权限：</view>
+    <view class="auth-item">获取你的公开信息（头像、昵称等）</view>
+    <view class="btn-authorize">
+      <button class="plain" @tap="notNow" type="primary" lang="zh_CN">暂不登录</button>
+      <button class="blue" open-type="getUserInfo" type="primary" lang="zh_CN" bindgetuserinfo="onGotUserInfo">授权
+      </button>
+    </view>
+  </view>
+</template>
+<script>
+  import wepy from 'wepy';
+  import { fetchData } from '../utils/util.js';
+  import { api } from '../utils/config';
+  import { SYSTEM_INFO, USER_SPECICAL_INFO, USER_INFO } from '@/utils/constant';
+
+  export default class Authorize extends wepy.page {
+    config = {
+      navigationBarTitleText: '授权登录'
+    };
+
+    data = {
+      r: null
+    };
+
+    onLoad(opt) {
+      this.r = opt.r;
+    }
+
+    async onGotUserInfo(e) {
+      if (e.detail.errMsg == 'getUserInfo:ok') {
+        let { userInfo, encryptedData, iv } = e.detail;
+        let sessionKey = wepy.getStorageSync(wepy.$instance.globalData.productid + '_sessionKey');
+        fetchData({
+          url: api.user.updateUserInfo,
+          method: 'POST',
+          data: {
+            ...userInfo,
+            encryptedData,
+            iv,
+            sessionKey,
+            nickname: e.detail.userInfo.nickName//微信字段不匹配，防止后台接受不到
+          }
+        }).then(data => {
+          wepy.$instance.globalData.user = data.item;
+          if (this.r && this.r != 'undefined') {
+            wepy.reLaunch({ url: decodeURIComponent(this.r) });
+            return;
+          } else {
+            wepy.navigateBack({
+              delta: 1
+            });
+            return;
+          }
+        });
+      } else {
+        wepy.getSetting().then(({ authSetting }) => {
+          if (!authSetting['scope.getUserInfo']) {
+            wepy.showModal({
+              title: '登录',
+              content: '需要获取基本信息，是否前往确认？',
+              showCancel: true
+            }).then(({ confirm }) => {
+              if (confirm) {
+                wepy.openSetting();
+              }
+            });
+          }
+        });
+      }
+    }
+
+    methods = {
+      notNow() {
+        wepy.reLaunch({
+          url: '/pages/personal/personal'
+        });
+      }
+    };
+
+    events = {};
+  }
+</script>
+<style lang="less" type="text/less" scoped>
+  page {
+    height: 100%;
+  }
+
+  .authorize-container {
+    height: 100%;
+    width: 750rpx;
+    background: #FFF;
+    text-align: center;
+    padding-top: 140rpx;
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #666;
+
+    .authorize-icon {
+      width: 550rpx;
+      margin: 0 auto;
+    }
+
+    .auth-item {
+      padding: 5rpx 0;
+    }
+
+    .btn-authorize {
+      margin: 100rpx 50rpx;
+      display: flex;
+      justify-content: space-between;
+
+      button {
+        flex: 0 0 200rpx;
+        border-radius: 100rpx;
+        font-size: 28rpx;
+        height: 64rpx;
+        line-height: 64rpx;
+
+        &.blue {
+          background-color: #6badff;
+          color: #FFF;
+        }
+
+        &.plain {
+          border: 1px solid #6badff;
+          background-color: #FFF;
+          color: #6badff
+        }
+      }
+    }
+  }
+</style>
