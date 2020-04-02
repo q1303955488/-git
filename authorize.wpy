@@ -8,8 +8,6 @@
     <view class="auth-item">获取你的公开信息（头像、昵称等）</view>
     <view class="btn-authorize">
       <button class="plain" @tap="notNow" type="primary" lang="zh_CN">暂不登录</button>
-      <button class="blue" open-type="getUserInfo" type="primary" lang="zh_CN" bindgetuserinfo="onGotUserInfo">授权
-      </button>
     </view>
   </view>
 </template>
